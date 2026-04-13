@@ -1,3 +1,6 @@
+
+import "../styles/global.css"
+
 export async function getServerSideProps() {
     return {
       props: {
