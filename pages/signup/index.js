@@ -6,12 +6,12 @@ export async function getServerSideProps() {
   return {
     props: {
       appName: "Cookie Consent Manager",
-      subtitle: "Manage consent banners, domains, and user preferences.",
+      subtitle: "Create your workspace and manage consent banners with ease.",
     },
   };
 }
 
-export default function LoginPage({ appName, subtitle }) {
+export default function SignupPage({ appName, subtitle }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -21,25 +21,26 @@ export default function LoginPage({ appName, subtitle }) {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
+    const name = formData.get("name");
     const email = formData.get("email");
     const password = formData.get("password");
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/login`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/signup`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ name, email, password }),
         }
       );
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Login failed");
+        throw new Error(data.message || "Signup failed");
       }
 
       localStorage.setItem("token", data.token);
@@ -56,10 +57,10 @@ export default function LoginPage({ appName, subtitle }) {
   return (
     <>
       <Head>
-        <title>{appName} | Login</title>
+        <title>{appName} | Sign Up</title>
         <meta
           name="description"
-          content="Login to your cookie consent manager dashboard"
+          content="Create an account for your cookie consent manager dashboard"
         />
       </Head>
 
@@ -73,12 +74,12 @@ export default function LoginPage({ appName, subtitle }) {
               </div>
 
               <h1 className={styles.heroTitle}>
-                Simplify consent management across all your websites.
+                Launch consent management for every domain you control.
               </h1>
 
               <p className={styles.heroText}>
-                Centralize cookie banner settings, consent logs, compliance
-                status, and regional configuration from one dashboard.
+                Create your account to manage cookie banners, regional rules,
+                category preferences, and consent workflows from one place.
               </p>
             </div>
 
@@ -109,11 +110,25 @@ export default function LoginPage({ appName, subtitle }) {
                   </div>
                 </div>
 
-                <h2 className={styles.title}>Welcome back</h2>
+                <h2 className={styles.title}>Create account</h2>
                 <p className={styles.subtitle}>{subtitle}</p>
               </div>
 
               <form className={styles.form} onSubmit={handleSubmit}>
+                <div className={styles.field}>
+                  <label htmlFor="name" className={styles.label}>
+                    Full name
+                  </label>
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    placeholder="Prashant Sharma"
+                    className={styles.input}
+                    required
+                  />
+                </div>
+
                 <div className={styles.field}>
                   <label htmlFor="email" className={styles.label}>
                     Work email
@@ -133,28 +148,17 @@ export default function LoginPage({ appName, subtitle }) {
                     <label htmlFor="password" className={styles.label}>
                       Password
                     </label>
-                    <a href="#" className={styles.link}>
-                      Forgot password?
-                    </a>
+                    <span className={styles.secureTag}>Minimum 8 characters</span>
                   </div>
 
                   <input
                     id="password"
                     name="password"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder="Create a password"
                     className={styles.input}
                     required
                   />
-                </div>
-
-                <div className={styles.optionsRow}>
-                  <label className={styles.checkboxLabel}>
-                    <input type="checkbox" className={styles.checkbox} />
-                    Remember me
-                  </label>
-
-                  <span className={styles.secureTag}>Secure login</span>
                 </div>
 
                 {error ? (
@@ -168,7 +172,7 @@ export default function LoginPage({ appName, subtitle }) {
                   className={styles.primaryButton}
                   disabled={loading}
                 >
-                  {loading ? "Signing in..." : "Sign in to dashboard"}
+                  {loading ? "Creating account..." : "Create dashboard account"}
                 </button>
               </form>
 
@@ -188,9 +192,9 @@ export default function LoginPage({ appName, subtitle }) {
               </div>
 
               <p className={styles.footerText}>
-                Need access?{" "}
-                <a href="#" className={styles.link}>
-                  Request an account
+                Already have an account?{" "}
+                <a href="/auth/login" className={styles.link}>
+                  Sign in
                 </a>
               </p>
             </div>
