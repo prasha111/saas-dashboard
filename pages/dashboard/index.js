@@ -26,6 +26,23 @@ export default function Dashboard() {
   const [isExporting, setIsExporting] = useState(false);
   const [isConsentExporting, setIsConsentExporting] = useState(false);
   const [isRecordingConsent, setIsRecordingConsent] = useState(false);
+  const [bannerForm, setBannerForm] = useState({
+    title: "Your privacy",
+    message:
+      "We use cookies to enhance your browsing experience and analyze traffic.",
+    layout: "bottom-bar",
+    position: "bottom",
+    themeColor: "#0f766e",
+    textColor: "#ffffff",
+    showReject: true,
+    showCustomize: true,
+    overlayEnabled: false,
+    regionScope: "Global",
+  });
+  
+  const [bannerHistory, setBannerHistory] = useState([]);
+  const [activeBanner, setActiveBanner] = useState(null);
+  const [isSavingBanner, setIsSavingBanner] = useState(false);
 
   const [form, setForm] = useState({
     domain: "",
@@ -64,6 +81,97 @@ export default function Dashboard() {
       time: "3 hr ago",
     },
   ]);
+
+  const fetchBannerConfigs = async (siteId) => {
+    if (!siteId) return;
+  
+    try {
+      const token = getToken();
+  
+      const res = await fetch(`${API_URL}/api/banner/${siteId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to fetch banner configs");
+      }
+  
+      setActiveBanner(data.activeBanner || null);
+      setBannerHistory(data.banners || []);
+  
+      const source = data.activeBanner || data.banners?.[0];
+  
+      if (source) {
+        setBannerForm({
+          title: source.title || "Your privacy",
+          message:
+            source.message ||
+            "We use cookies to enhance your browsing experience and analyze traffic.",
+          layout: source.layout || "bottom-bar",
+          position: source.position || "bottom",
+          themeColor: source.themeColor || "#0f766e",
+          textColor: source.textColor || "#ffffff",
+          showReject: source.showReject ?? true,
+          showCustomize: source.showCustomize ?? true,
+          overlayEnabled: source.overlayEnabled ?? false,
+          regionScope: source.regionScope || "Global",
+        });
+      }
+    } catch (error) {
+      console.error(error.message);
+      setBannerHistory([]);
+      setActiveBanner(null);
+    }
+  };
+  
+  const handleBannerFieldChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setBannerForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+  
+  const saveBannerVersion = async (publish = false) => {
+    if (!selectedSiteId) return;
+  
+    try {
+      setIsSavingBanner(true);
+      const token = getToken();
+  
+      const res = await fetch(`${API_URL}/api/banner`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          siteId: selectedSiteId,
+          ...bannerForm,
+          publish,
+        }),
+      });
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to save banner");
+      }
+  
+      await fetchBannerConfigs(selectedSiteId);
+    } catch (error) {
+      console.error(error.message);
+    } finally {
+      setIsSavingBanner(false);
+    }
+  };
+
+
+
 
   const getToken = () => localStorage.getItem("token");
 
@@ -467,6 +575,7 @@ export default function Dashboard() {
       fetchScanHistory(selectedSiteId);
       fetchConsentLogs(selectedSiteId);
       fetchLiveCookies();
+      fetchBannerConfigs(selectedSiteId);
     }
   }, [selectedSiteId]);
 
@@ -1015,6 +1124,206 @@ export default function Dashboard() {
             </>
           )}
         </main>
+        {selectedSiteId && (
+  <section className={styles.cookieSection}>
+    <div className={styles.panel}>
+      <div className={styles.panelHead}>
+        <div>
+          <h2 className={styles.panelTitle}>Banner settings</h2>
+          <p className={styles.panelSub}>
+            Configure banner content, layout, buttons, theme, and region scope
+            for {selectedSite?.domain || "selected domain"}
+          </p>
+        </div>
+      </div>
+
+      <div className={styles.modalForm}>
+        <div className={styles.field}>
+          <label className={styles.label}>Banner title</label>
+          <input
+            type="text"
+            name="title"
+            value={bannerForm.title}
+            onChange={handleBannerFieldChange}
+            className={styles.input}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>Banner message</label>
+          <textarea
+            name="message"
+            value={bannerForm.message}
+            onChange={handleBannerFieldChange}
+            className={styles.input}
+            rows={4}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>Layout</label>
+          <select
+            name="layout"
+            value={bannerForm.layout}
+            onChange={handleBannerFieldChange}
+            className={styles.input}
+          >
+            <option value="bottom-bar">Bottom bar</option>
+            <option value="modal">Modal</option>
+          </select>
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>Position</label>
+          <select
+            name="position"
+            value={bannerForm.position}
+            onChange={handleBannerFieldChange}
+            className={styles.input}
+          >
+            <option value="bottom">Bottom</option>
+            <option value="top">Top</option>
+            <option value="center">Center</option>
+          </select>
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>Theme color</label>
+          <input
+            type="color"
+            name="themeColor"
+            value={bannerForm.themeColor}
+            onChange={handleBannerFieldChange}
+            className={styles.input}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>Text color</label>
+          <input
+            type="color"
+            name="textColor"
+            value={bannerForm.textColor}
+            onChange={handleBannerFieldChange}
+            className={styles.input}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>Region scope</label>
+          <select
+            name="regionScope"
+            value={bannerForm.regionScope}
+            onChange={handleBannerFieldChange}
+            className={styles.input}
+          >
+            <option value="Global">Global</option>
+            <option value="EU">EU</option>
+            <option value="US">US</option>
+            <option value="UK">UK</option>
+            <option value="IN">IN</option>
+          </select>
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>
+            <input
+              type="checkbox"
+              name="showReject"
+              checked={bannerForm.showReject}
+              onChange={handleBannerFieldChange}
+            />{" "}
+            Show Reject All button
+          </label>
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>
+            <input
+              type="checkbox"
+              name="showCustomize"
+              checked={bannerForm.showCustomize}
+              onChange={handleBannerFieldChange}
+            />{" "}
+            Show Customize button
+          </label>
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>
+            <input
+              type="checkbox"
+              name="overlayEnabled"
+              checked={bannerForm.overlayEnabled}
+              onChange={handleBannerFieldChange}
+            />{" "}
+            Enable overlay
+          </label>
+        </div>
+
+        <div className={styles.modalActions}>
+          <button
+            type="button"
+            className={styles.secondaryBtn}
+            onClick={() => saveBannerVersion(false)}
+            disabled={isSavingBanner}
+          >
+            {isSavingBanner ? "Saving..." : "Save draft"}
+          </button>
+
+          <button
+            type="button"
+            className={styles.primaryBtn}
+            onClick={() => saveBannerVersion(true)}
+            disabled={isSavingBanner}
+          >
+            {isSavingBanner ? "Publishing..." : "Publish new version"}
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.panelMarginTop}>
+        <h3 className={styles.panelTitle}>Banner versions</h3>
+        <p className={styles.panelSub}>
+          Version history for banner configuration changes
+        </p>
+
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Version</th>
+                <th>Status</th>
+                <th>Layout</th>
+                <th>Region</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bannerHistory.length > 0 ? (
+                bannerHistory.map((banner) => (
+                  <tr key={banner._id}>
+                    <td>v{banner.version}</td>
+                    <td>{banner.isActive ? "active" : banner.status}</td>
+                    <td>{banner.layout}</td>
+                    <td>{banner.regionScope}</td>
+                    <td>{new Date(banner.updatedAt).toLocaleString()}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className={styles.emptyCell}>
+                    No banner versions found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+)}
 
         {isModalOpen && (
           <div
